@@ -1,2 +1,4 @@
 --find-links wheelhouse
 Flask-GraphQl
+graphene
+pyodbc
