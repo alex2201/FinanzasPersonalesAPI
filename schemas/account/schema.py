@@ -1,87 +1,60 @@
 import graphene
-from database.mysqlconn import DBConn
-from database.sqlserverconn import SQLServerDBConn
+
+from database import sql_server_call_proc, sql_server_execute_query
 
 
 class Account(graphene.ObjectType):
-    account_id = graphene.ID(required=True)
-    name = graphene.String(required=True)
+    accountId = graphene.ID(required=True)
+    accountName = graphene.String(required=True)
     balance = graphene.Float(required=True)
-    date = graphene.DateTime(required=True)
+    createDate = graphene.DateTime(required=True)
 
 
 class Query(graphene.ObjectType):
-    user_accounts = graphene.List(Account, user_id=graphene.ID(required=True), required=True)
+    user_accounts = graphene.List(Account, userId=graphene.ID(required=True), required=True)
 
     @staticmethod
-    def resolve_user_accounts(root, info, user_id):
+    def resolve_user_accounts(root, info, userId):
         query = f"""select accountId, accountName, createDate, balance
                 from vw_account_detail accdet
-                where accdet.userId = {int(user_id)}"""
-
-        with SQLServerDBConn() as cnxn:
-            cursor = cnxn.cursor()
-            cursor.execute(query)
-            row = cursor.fetchone()
-            result = []
-            while row:
-                r = {
-                    "account_id": row[0],
-                    "name": row[1],
-                    "date": row[2],
-                    "balance": row[3],
-                }
-                result.append(r)
-                row = cursor.fetchone()
+                where accdet.userId = \'{userId}\'
+                order by accountName"""
+        result = sql_server_execute_query(query)
         return result
 
 
 # Mutations
 class CreateAccount(graphene.Mutation):
     class Arguments:
-        user_id = graphene.ID(required=True)
-        account_name = graphene.String(required=True)
-        init_amount = graphene.Float(required=True)
+        userId = graphene.ID(required=True)
+        accountName = graphene.String(required=True)
+        initAmount = graphene.Float(required=True)
 
     status = graphene.Boolean()
-    error_msg = graphene.String()
+    errorMsg = graphene.String()
 
     @classmethod
     def mutate(root, info, _, **kwargs):
-        user_id = kwargs['user_id']
-        account_name = kwargs['account_name']
-        init_amount = kwargs['init_amount']
-
-        spcall = f'EXEC sp_create_account {user_id}, \'{account_name}\', {init_amount}'
-
-        with SQLServerDBConn() as cnxn:
-            cursor = cnxn.cursor()
-            cursor.execute(spcall)
-            status, error_msg = cursor.fetchone()
-            result = {"status": status, "error_msg": error_msg}
-            cursor.close()
-
+        user_id = kwargs['userId']
+        account_name = kwargs['accountName']
+        init_amount = kwargs['initAmount']
+        spcall = f'EXEC sp_create_account \'{user_id}\', \'{account_name}\', {init_amount}'
+        result = sql_server_call_proc(spcall)
         return CreateAccount(**result)
 
 
 class DeleteAccount(graphene.Mutation):
     class Arguments:
-        account_id = graphene.ID(required=True)
+        accountId = graphene.ID(required=True)
 
     status = graphene.Boolean()
-    error_msg = graphene.String()
+    errorMsg = graphene.String()
 
     @classmethod
     def mutate(root, info, _, **kwargs):
-        account_id = kwargs['account_id']
-        spcall = f'EXEC sp_delete_account {account_id}'
-        with SQLServerDBConn() as cnxn:
-            cursor = cnxn.cursor()
-            cursor.execute(spcall)
-            status, error_msg = cursor.fetchone()
-            result = {"status": status, "error_msg": error_msg}
-            cursor.close()
-
+        accountId = kwargs['accountId']
+        spcall = f'EXEC sp_delete_account \'{accountId}\''
+        result = sql_server_call_proc(spcall)
         return DeleteAccount(**result)
 
 

@@ -1,18 +1,20 @@
 from flask import Flask
 from flask_graphql import GraphQLView
 
-from schemas.helloworld.schema import schema as hw_schema
 from schemas.account.schema import account_schema
 from schemas.movement.schema import movement_schema
+from schemas.user.schema import user_schema
+
+# from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
 
-# Routes
+# Route
 app.add_url_rule(
-    '/graphql',
+    '/api/user',
     view_func=GraphQLView.as_view(
         'graphql',
-        schema=hw_schema,
+        schema=user_schema,
         graphiql=True  # for having the GraphiQL interface
     )
 )
@@ -42,4 +44,6 @@ def index():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # CORS(app)
+    # app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', debug=False)
