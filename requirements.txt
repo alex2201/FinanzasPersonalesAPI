@@ -1,2 +1,2 @@
 --find-links wheelhouse
-flask_graphql
+Flask-GraphQl
