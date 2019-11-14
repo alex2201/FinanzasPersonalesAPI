@@ -1,9 +1,11 @@
 import graphene
+from flask_graphql_auth import AuthInfoField, mutation_jwt_required
 
 from database import sql_server_call_proc, sql_server_execute_query
-
-
 # Types
+from schemas.generic import SPCallResultType, query_jwt_required_list
+
+
 class MovementType(graphene.ObjectType):
     movTypeId = graphene.ID(required=True)
     movTypeDesc = graphene.String(required=True)
@@ -19,12 +21,22 @@ class Movement(graphene.ObjectType):
     dateTimeId = graphene.DateTime(required=True)
 
 
+class ProtectedUnion(graphene.Union):
+    class Meta:
+        types = (Movement, AuthInfoField, SPCallResultType)
+
+    @classmethod
+    def resolve_type(cls, instance, info):
+        return type(instance)
+
+
 # Query
 class MovementQuery(graphene.ObjectType):
     account_movements = graphene.List(Movement, accountId=graphene.ID(required=True), required=True)
     movement_types = graphene.List(MovementType)
 
     @staticmethod
+    @query_jwt_required_list
     def resolve_account_movements(root, info, accountId):
         query = f"""select *
                 from vw_movement_detail movdet
@@ -35,7 +47,7 @@ class MovementQuery(graphene.ObjectType):
             r['movType'] = {'movTypeId': r['movTypeId'], 'movTypeDesc': r['movTypeDesc']}
             del r['movTypeId']
             del r['movTypeDesc']
-        return result
+        return [Movement(**r) for r in result]
 
     @staticmethod
     def resolve_movement_types(root, info):
@@ -48,17 +60,18 @@ class MovementQuery(graphene.ObjectType):
 # Mutations
 class AddMovement(graphene.Mutation):
     class Arguments:
+        token = graphene.String(required=True)
         movDesc = graphene.String(required=True)
         amount = graphene.Float(required=True)
         accountId = graphene.ID(required=True)
         movTypeId = graphene.ID(required=True)
         dateId = graphene.String(required=True)
 
-    status = graphene.Boolean()
-    errorMsg = graphene.String()
+    result = graphene.Field(ProtectedUnion)
 
     @classmethod
-    def mutate(root, info, _, **kwargs):
+    @mutation_jwt_required
+    def mutate(cls, info, _, **kwargs):
         movDesc = kwargs['movDesc']
         amount = kwargs['amount']
         accountId = kwargs['accountId']
@@ -71,22 +84,23 @@ class AddMovement(graphene.Mutation):
                  f'\'{movTypeId}\', ' \
                  f'\'{dateId}\''
         result = sql_server_call_proc(spcall)
-        return AddMovement(**result)
+        return AddMovement(result=SPCallResultType(**result))
 
 
 class DeleteMovement(graphene.Mutation):
     class Arguments:
+        token = graphene.String(required=True)
         movId = graphene.ID(required=True)
 
-    status = graphene.Boolean()
-    errorMsg = graphene.String()
+    result = graphene.Field(ProtectedUnion)
 
     @classmethod
-    def mutate(root, info, _, **kwargs):
+    @mutation_jwt_required
+    def mutate(cls, info, _, **kwargs):
         movId = kwargs['movId']
         spcall = f'EXEC sp_delete_movement \'{movId}\''
         result = sql_server_call_proc(spcall)
-        return DeleteMovement(**result)
+        return DeleteMovement(result=SPCallResultType(**result))
 
 
 class MovementMutation(graphene.ObjectType):

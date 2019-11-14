@@ -1,13 +1,19 @@
 from flask import Flask
+from flask_cors import CORS
 from flask_graphql import GraphQLView
+from flask_graphql_auth import GraphQLAuth
 
 from schemas.account.schema import account_schema
 from schemas.movement.schema import movement_schema
 from schemas.user.schema import user_schema
 
-# from flask_cors import CORS, cross_origin
-
 app = Flask(__name__)
+
+# JWT configuration.
+auth = GraphQLAuth(app)
+app.config["JWT_SECRET_KEY"] = "$Godin.Financiero.App"  # change this!
+app.config["REFRESH_EXP_LENGTH"] = False
+app.config["ACCESS_EXP_LENGTH"] = 10
 
 # Route
 app.add_url_rule(
@@ -44,6 +50,6 @@ def index():
 
 
 if __name__ == '__main__':
-    # CORS(app)
-    # app.run(host='0.0.0.0', port=5000, debug=False)
-    app.run(host='0.0.0.0', debug=False)
+    CORS(app)
+    app.run(host='0.0.0.0', port=5000, debug=True)
+    # app.run(host='0.0.0.0', debug=False)

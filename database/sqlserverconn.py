@@ -3,19 +3,19 @@ import pyodbc
 
 class SQLServerDBConn:
     def __enter__(self):
-        self.cnxn = pyodbc.connect(
-            'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=appsmx-development.database.windows.net;'
-            'DATABASE=PersonalFinance;'
-            'UID=AppsMxMaster;'
-            'PWD=appsmx.1234')
-
         # self.cnxn = pyodbc.connect(
         #     'DRIVER={ODBC Driver 17 for SQL Server};'
-        #     'SERVER=localhost;'
+        #     'SERVER=appsmx-development.database.windows.net;'
         #     'DATABASE=PersonalFinance;'
-        #     'UID=sa;'
-        #     'PWD=admin.1234')
+        #     'UID=AppsMxMaster;'
+        #     'PWD=appsmx.1234')
+
+        self.cnxn = pyodbc.connect(
+            'DRIVER={ODBC Driver 17 for SQL Server};'
+            'SERVER=localhost;'
+            'DATABASE=PersonalFinance;'
+            'UID=sa;'
+            'PWD=admin.1234')
 
         return self.cnxn
 

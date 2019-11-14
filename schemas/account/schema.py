@@ -1,6 +1,12 @@
 import graphene
+from flask_graphql_auth import (
+    AuthInfoField,
+    get_jwt_identity,
+    mutation_jwt_required)
 
 from database import sql_server_call_proc, sql_server_execute_query
+# Types
+from schemas.generic import SPCallResultType, query_jwt_required_list
 
 
 class Account(graphene.ObjectType):
@@ -10,52 +16,67 @@ class Account(graphene.ObjectType):
     createDate = graphene.DateTime(required=True)
 
 
+class ProtectedUnion(graphene.Union):
+    class Meta:
+        types = (Account, AuthInfoField, SPCallResultType)
+
+    @classmethod
+    def resolve_type(cls, instance, info):
+        return type(instance)
+
+
+# Query
 class Query(graphene.ObjectType):
-    user_accounts = graphene.List(Account, userId=graphene.ID(required=True), required=True)
+    user_accounts = graphene.List(ProtectedUnion, token=graphene.String(required=True))
 
     @staticmethod
-    def resolve_user_accounts(root, info, userId):
+    @query_jwt_required_list
+    def resolve_user_accounts(root, info):
+        identity = get_jwt_identity()
+        userId = identity['userId']
         query = f"""select accountId, accountName, createDate, balance
                 from vw_account_detail accdet
                 where accdet.userId = \'{userId}\'
                 order by accountName"""
         result = sql_server_execute_query(query)
-        return result
+        return [Account(**r) for r in result]
 
 
 # Mutations
 class CreateAccount(graphene.Mutation):
     class Arguments:
-        userId = graphene.ID(required=True)
+        token = graphene.String(required=True)
         accountName = graphene.String(required=True)
         initAmount = graphene.Float(required=True)
 
-    status = graphene.Boolean()
-    errorMsg = graphene.String()
+    result = graphene.Field(ProtectedUnion)
 
     @classmethod
+    @mutation_jwt_required
     def mutate(root, info, _, **kwargs):
-        user_id = kwargs['userId']
+        identity = get_jwt_identity()
+        user_id = identity['userId']
         account_name = kwargs['accountName']
         init_amount = kwargs['initAmount']
         spcall = f'EXEC sp_create_account \'{user_id}\', \'{account_name}\', {init_amount}'
         result = sql_server_call_proc(spcall)
-        return CreateAccount(**result)
+        return CreateAccount(result=SPCallResultType(**result))
 
 
 class DeleteAccount(graphene.Mutation):
     class Arguments:
+        token = graphene.String(required=True)
         accountId = graphene.ID(required=True)
 
-    status = graphene.Boolean()
-    errorMsg = graphene.String()
+    result = graphene.Field(ProtectedUnion)
 
     @classmethod
+    @mutation_jwt_required
     def mutate(root, info, _, **kwargs):
         accountId = kwargs['accountId']
         spcall = f'EXEC sp_delete_account \'{accountId}\''
         result = sql_server_call_proc(spcall)
-        return DeleteAccount(**result)
+        return DeleteAccount(result=SPCallResultType(**result))
 
 
 class AccountMutation(graphene.ObjectType):

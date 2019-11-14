@@ -1,4 +1,6 @@
+flask
 --find-links wheelhouse
 Flask-GraphQl
 graphene
 pyodbc
+Flask-GraphQL-Auth
