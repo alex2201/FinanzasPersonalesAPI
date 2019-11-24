@@ -8,10 +8,13 @@ from schemas.movement.schema import movement_schema
 from schemas.user.schema import user_schema
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 
+app.config["EMAIL_CONFIRM_SECRET_KEY"] = r"$Godin.Financiero.Email.Confirm"  # change this!
 # JWT configuration.
 auth = GraphQLAuth(app)
-app.config["JWT_SECRET_KEY"] = "$Godin.Financiero.App"  # change this!
+app.config["JWT_SECRET_KEY"] = r"$Godin.Financiero.App"  # change this!
 app.config["REFRESH_EXP_LENGTH"] = False
 app.config["ACCESS_EXP_LENGTH"] = 10
 
@@ -50,6 +53,5 @@ def index():
 
 
 if __name__ == '__main__':
-    CORS(app)
     app.run(host='0.0.0.0', port=5000, debug=True)
     # app.run(host='0.0.0.0', debug=False)

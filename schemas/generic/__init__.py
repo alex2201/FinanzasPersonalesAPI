@@ -11,7 +11,6 @@ class SPCallResultType(graphene.ObjectType):
 
 
 # Wrapper
-
 def query_jwt_required_list(fn):
     """
     A decorator to protect a query resolver.
