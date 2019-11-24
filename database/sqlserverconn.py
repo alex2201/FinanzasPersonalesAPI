@@ -12,7 +12,7 @@ class SQLServerDBConn:
 
         self.cnxn = pyodbc.connect(
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=localhost;'
+            'SERVER=tcp:192.168.1.98,49172;'
             'DATABASE=PersonalFinance;'
             'UID=sa;'
             'PWD=admin.1234')
